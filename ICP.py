@@ -28,7 +28,7 @@ def compute_local_PCA(query_points, cloud_points, radius):
 
     tree = KDTree(cloud_points, 40)
     neighbors_list = tree.query_radius(query_points, radius)
-    # neighbors_list = tree.query(query_points, k=30)   # TODO: FOR QUESTION 4 uncommment the line and comment the one above
+    # neighbors_list = tree.query(query_points, k=30)   # KNN VERSION
 
     all_eigenvalues = np.zeros((cloud_points.shape[0], 3))
     all_eigenvectors = np.zeros((cloud_points.shape[0], 3, 3))
@@ -53,35 +53,25 @@ def compute_local_PCA(query_points, cloud_points, radius):
     
 
 def compute_features(query_points, cloud_points, radius):
-    n = query_points.shape[0]
-    eps = 1e-6
+    """
+    This function will compute all important geometrical features for each points of query_points.
+    """
     all_eigenvalues, all_eigenvectors = compute_local_PCA(query_points, cloud_points, radius)
 
     print("Min eigenvalue:", np.min(all_eigenvalues))
 
-    normals = all_eigenvectors[:, :, 0]
+    # normals = all_eigenvectors[:, :, 0]
     
-    standart_deviation = np.sqrt(np.maximum(all_eigenvalues, 0))
-
-
-    a1D = 1 - standart_deviation[:,1]/(standart_deviation[:,2]+eps)
-    a2D = (standart_deviation[:,1] - standart_deviation[:,0])/(standart_deviation[:,2]+eps)
-    a3D = standart_deviation[:,0]/(standart_deviation[:,2]+eps)
-    
-    sum_ad = a1D + a2D + a3D
-    
-    a1D *= 1/sum_ad
-    a2D *= 1/sum_ad
-    a3D *= 1/sum_ad
+    a1D, a2D, a3D = compute_aiD(all_eigenvalues)
 
     aD = np.column_stack((a1D,a2D,a3D))
-
+    standard_deviation = np.sqrt(np.maximum(all_eigenvalues, 0))
     
     d_star = np.argmax(aD,axis = 1) + 1
 
-    V = standart_deviation[:,0] * standart_deviation[:,1] * standart_deviation[:,2]
+    V = standard_deviation[:,0] * standard_deviation[:,1] * standard_deviation[:,2]
 
-    Ef  = -a1D * np.log(a1D + 1e-10) -a2D * np.log(a2D + 1e-10) -a3D * np.log(a3D + 1e-10) 
+    Ef = Shannon_Entropy(a1D, a2D, a3D) 
 
     return all_eigenvalues, all_eigenvectors, aD, d_star, radius, Ef, V
 
@@ -97,7 +87,6 @@ def best_rigid_transform(data, ref):
            Such that R * data + T is aligned on ref
     '''
 
-    # YOUR CODE
     R = np.eye(data.shape[0])
     T = np.zeros((data.shape[0],1))
     data_barycenter = np.mean(data, axis = 1, keepdims = True)
@@ -107,21 +96,37 @@ def best_rigid_transform(data, ref):
     Q_ref = ref - ref_barycenter
 
     H = Q_data@Q_ref.T
-
     U, _, Vh = np.linalg.svd(H)
-
-
     R = Vh.T @ U.T
 
     if np.linalg.det(R) < 0:
         U[:, -1] *= -1
         R = Vh.T @ U.T
 
-    
     T = ref_barycenter - R @ data_barycenter
     return R, T
+    
 
+def compute_aiD(eigenvalues, eps = 1e-6):
+    standard_deviation = np.sqrt(np.maximum(eigenvalues, 0))
 
+    a1D = 1 - standard_deviation[:,1]/(standard_deviation[:,2]+eps)
+    a2D = (standard_deviation[:,1] - standard_deviation[:,0])/(standard_deviation[:,2]+eps)
+    a3D = standard_deviation[:,0]/(standard_deviation[:,2]+eps)
+    
+    sum_ad = a1D + a2D + a3D
+    
+    a1D *= 1/sum_ad
+    a2D *= 1/sum_ad
+    a3D *= 1/sum_ad
+
+    return a1D, a2D, a3D
+
+def Shannon_Entropy(a1D, a2D, a3D):
+    """
+    This function computes and returns the Shannon Entropy for a1D, a2D, a3D
+    """
+    return -a1D * np.log(a1D + 1e-10) -a2D * np.log(a2D + 1e-10) -a3D * np.log(a3D + 1e-10) 
 
 def icp_point_to_point(data, ref, max_iter, RMS_threshold):
     '''
@@ -239,15 +244,34 @@ def icp_point_to_point_fast(data, ref, max_iter, RMS_threshold, sampling_limit):
     return data_aligned, R_list, T_list, neighbors_list, RMS_list
 
 
+def compute_optimal_radius(query_points, point_cloud, radius_list):
+    """
+    For each point of query_points we compute its optimal radius in radius_list.
+    We return optimal_radius_list, an array containing for query_point[i] the optimal radius.
+    """
+    tree = KDTree(point_cloud)
+    n = query_points.shape[0]
+    optimal_radius_list = np.zeros(n)
+    min_entropy = 10000.0
 
-#------------------------------------------------------------------------------------------
-#
-#           Main
-#       \**********/
-#
-#
-#   Here you can define the instructions that are called when you execute this file
-#
+    for i in range(n):
+        for r in radius_list:
+            neighbors_idx = tree.query_radius(query_points[i].reshape(1,3), r)
+            if len(neighbors_idx) < 10:
+                continue  # Skip small neighborhoods
+            
+            neighbors = point_cloud[neighbors_idx]
+            eigenvalues = compute_local_PCA(neighbors)[0]
+            a1D, a2D, a3D = compute_aiD(eigenvalues)
+            entropy = Shannon_Entropy(a1D, a2D, a3D)
+
+            if entropy < min_entropy:
+                min_entropy = entropy
+                optimal_radius = r
+
+        optimal_radius_list[i] = optimal_radius
+
+    return optimal_radius_list
 
 
 if __name__ == '__main__':
