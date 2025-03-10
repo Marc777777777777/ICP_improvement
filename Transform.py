@@ -62,6 +62,9 @@ if __name__ == "__main__":
     # Concatenate x, y, and z in a (N*3) point matrix
     points = np.vstack((data['x'], data['y'], data['z'])).T
 
+    # We select a subsample of the original point cloud
+    # points = np.random.choice(points, size=int(0.9*points.shape[0]))
+
     means = np.mean(points, axis=0)
 
     # Small translation

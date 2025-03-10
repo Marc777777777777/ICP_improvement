@@ -13,7 +13,7 @@ def NoSelection(data, dimension_array, entropy_array):
     indices =  np.arange(data.shape[1])
     return indices
 
-def RandomSelection(data, dimension_array,entropy_array, ratio): 
+def RandomSelection(data, dimension_array, entropy_array, ratio): 
     '''
     Selects a random subset of the data points
     Inputs: 
@@ -27,7 +27,7 @@ def RandomSelection(data, dimension_array,entropy_array, ratio):
     indices = np.random.choice(N_data,nb_point_sampled, replace = False)
     return indices
 
-def EntropySelection(data, dimension_array,entropy_array, threshold):
+def EntropySelection(data, dimension_array, entropy_array, threshold):
     '''
     Selects points with an entropy superior to threshold
     Inputs: 
