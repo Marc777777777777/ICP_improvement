@@ -1,4 +1,3 @@
- 
 # Import numpy package and name it "np"
 import numpy as np
 
@@ -14,6 +13,11 @@ from visu import show_ICP
 
 import sys
 
+# Import functions from all the differents ICP steps
+from ICP_features import *
+from ICP_selection import *
+from ICP_rejection import *
+from ICP_weighting import *
 
 #------------------------------------------------------------------------------------------
 #
@@ -23,110 +27,6 @@ import sys
 #
 #   Here you can define usefull functions to be used in the main
 #
-def compute_local_PCA(query_points, cloud_points, radius):
-    # This function needs to compute PCA on the neighborhoods of all query_points in cloud_points
-
-    tree = KDTree(cloud_points, 40)
-    neighbors_list = tree.query_radius(query_points, radius)
-    # neighbors_list = tree.query(query_points, k=30)   # KNN VERSION
-
-    all_eigenvalues = np.zeros((cloud_points.shape[0], 3))
-    all_eigenvectors = np.zeros((cloud_points.shape[0], 3, 3))
-
-    for i in range(neighbors_list.shape[0]):
-        # We first get the list of neighbor indices
-        neighbor_index = neighbors_list[i]
-        n_neighbor = neighbor_index.shape[0]
-        neighbors = cloud_points[neighbor_index, :]
-
-        # Then we compute the PCA and get the eigenvalues and eigenvectors
-        barycenter_neighbor = np.mean(neighbors, axis=0)
-        cov_mat = (1/n_neighbor)*(neighbors-barycenter_neighbor).T@(neighbors-barycenter_neighbor)
-        output_eigh = np.linalg.eigh(cov_mat)
-        eigenvalue = output_eigh[0]
-        eigenvector = output_eigh[1]
-
-        all_eigenvalues[i] = eigenvalue
-        all_eigenvectors[i] = eigenvector
-
-    return all_eigenvalues, all_eigenvectors
-    
-
-def compute_features(query_points, cloud_points, radius):
-    """
-    This function will compute all important geometrical features for each points of query_points.
-    """
-    all_eigenvalues, all_eigenvectors = compute_local_PCA(query_points, cloud_points, radius)
-
-    print("Min eigenvalue:", np.min(all_eigenvalues))
-
-    # normals = all_eigenvectors[:, :, 0]
-    
-    a1D, a2D, a3D = compute_aiD(all_eigenvalues)
-
-    aD = np.column_stack((a1D,a2D,a3D))
-    standard_deviation = np.sqrt(np.maximum(all_eigenvalues, 0))
-    
-    d_star = np.argmax(aD,axis = 1) + 1
-
-    V = standard_deviation[:,0] * standard_deviation[:,1] * standard_deviation[:,2]
-
-    Ef = Shannon_Entropy(a1D, a2D, a3D) 
-
-    return all_eigenvalues, all_eigenvectors, aD, d_star, radius, Ef, V
-
-def best_rigid_transform(data, ref):
-    '''
-    Computes the least-squares best-fit transform that maps corresponding points data to ref.
-    Inputs :
-        data = (d x N) matrix where "N" is the number of points and "d" the dimension
-         ref = (d x N) matrix where "N" is the number of points and "d" the dimension
-    Returns :
-           R = (d x d) rotation matrix
-           T = (d x 1) translation vector
-           Such that R * data + T is aligned on ref
-    '''
-
-    R = np.eye(data.shape[0])
-    T = np.zeros((data.shape[0],1))
-    data_barycenter = np.mean(data, axis = 1, keepdims = True)
-    ref_barycenter = np.mean(ref, axis = 1, keepdims = True)
-
-    Q_data = data -  data_barycenter
-    Q_ref = ref - ref_barycenter
-
-    H = Q_data@Q_ref.T
-    U, _, Vh = np.linalg.svd(H)
-    R = Vh.T @ U.T
-
-    if np.linalg.det(R) < 0:
-        U[:, -1] *= -1
-        R = Vh.T @ U.T
-
-    T = ref_barycenter - R @ data_barycenter
-    return R, T
-    
-
-def compute_aiD(eigenvalues, eps = 1e-6):
-    standard_deviation = np.sqrt(np.maximum(eigenvalues, 0))
-
-    a1D = 1 - standard_deviation[:,1]/(standard_deviation[:,2]+eps)
-    a2D = (standard_deviation[:,1] - standard_deviation[:,0])/(standard_deviation[:,2]+eps)
-    a3D = standard_deviation[:,0]/(standard_deviation[:,2]+eps)
-    
-    sum_ad = a1D + a2D + a3D
-    
-    a1D *= 1/sum_ad
-    a2D *= 1/sum_ad
-    a3D *= 1/sum_ad
-
-    return a1D, a2D, a3D
-
-def Shannon_Entropy(a1D, a2D, a3D):
-    """
-    This function computes and returns the Shannon Entropy for a1D, a2D, a3D
-    """
-    return -a1D * np.log(a1D + 1e-10) -a2D * np.log(a2D + 1e-10) -a3D * np.log(a3D + 1e-10) 
 
 def icp_point_to_point(data, ref, max_iter, RMS_threshold):
     '''
@@ -244,50 +144,140 @@ def icp_point_to_point_fast(data, ref, max_iter, RMS_threshold, sampling_limit):
     return data_aligned, R_list, T_list, neighbors_list, RMS_list
 
 
-def compute_optimal_radius(query_points, point_cloud, radius_list):
-    """
-    For each point of query_points we compute its optimal radius in radius_list.
-    We return optimal_radius_list, an array containing for query_point[i] the optimal radius.
-    """
-    tree = KDTree(point_cloud)
-    n = query_points.shape[0]
-    optimal_radius_list = np.zeros(n)
-    min_entropy = 10000.0
+def icp_ultimate(data, ref, max_iter, RMS_threshold, Selection = NoSelection, Weighting = ConstantWeighting, Rejection = NoRejection):
+    '''
+    Iterative closest point algorithm with a point to point strategy.
+    Inputs :
+        data = (d x N_data) matrix where "N_data" is the number of points and "d" the dimension
+        ref = (d x N_ref) matrix where "N_ref" is the number of points and "d" the dimension
+        max_iter = stop condition on the number of iterations
+        RMS_threshold = stop condition on the distance
+    Returns :
+        data_aligned = data aligned on reference cloud
+        R_list = list of the (d x d) rotation matrices found at each iteration
+        T_list = list of the (d x 1) translation vectors found at each iteration
+        neighbors_list = At each iteration, you search the nearest neighbors of each data point in
+        the ref cloud and this obtain a (1 x N_data) array of indices. This is the list of those
+        arrays at each iteration
+           
+    '''
+    # Variable for aligned data
+    data_aligned = np.copy(data)
 
-    for i in range(n):
-        for r in radius_list:
-            neighbors_idx = tree.query_radius(query_points[i].reshape(1,3), r)
-            if len(neighbors_idx) < 10:
-                continue  # Skip small neighborhoods
-            
-            neighbors = point_cloud[neighbors_idx]
-            eigenvalues = compute_local_PCA(neighbors)[0]
-            a1D, a2D, a3D = compute_aiD(eigenvalues)
-            entropy = Shannon_Entropy(a1D, a2D, a3D)
+    # Initiate lists
+    R_list = []
+    T_list = []
+    neighbors_list = []
+    RMS_list = []
 
-            if entropy < min_entropy:
-                min_entropy = entropy
-                optimal_radius = r
+    it = 0
+    RMS = np.inf
+    tree = KDTree(ref.T, leaf_size=35)
 
-        optimal_radius_list[i] = optimal_radius
+    #radius = 0.05
+    radius_list = [0.01, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0,10.0]
+    radius_list_data = compute_optimal_radius(data.T, data.T, radius_list) 
+    radius_list_ref = compute_optimal_radius(ref.T, ref.T, radius_list) 
 
-    return optimal_radius_list
+    all_eigenvalues_data, all_eigenvectors_data, aD_data, d_star_data, radius_data, Ef_data, V_data = compute_features(data.T, data.T, radius_list_data)
+    all_eigenvalues_ref, all_eigenvectors_ref, aD_ref, d_star_ref, radius_ref, Ef_ref, V_ref = compute_features(ref.T, ref.T, radius_list_ref)
+
+    while it < max_iter and RMS > RMS_threshold:
+
+        # Selection
+        selected_points_idx = Selection(data_aligned, d_star_data, Ef_data)
+        data_selected = data_aligned[:,selected_points_idx]
+
+        # Matching
+        matching_neighbour = tree.query(data_selected.T)[1].flatten()
+
+        # Weighting
+        V_data_selected = V_data[selected_points_idx]     #Keep the V of the new points only
+        V_ref_selected = V_ref[matching_neighbour]
+
+        normal_data_selected = all_eigenvectors_data[selected_points_idx, :, 0] #Same
+        normal_ref_selected = all_eigenvectors_ref[matching_neighbour, :, 0] 
+
+        # Need to verify order of eigenvector:
+        weights_selected = Weighting(data_selected,ref[:,matching_neighbour], normal_data_selected,normal_ref_selected, V_data_selected, V_ref_selected)
+
+        # Rejection
+        non_rejected_points_idx = Rejection(data_selected, ref[:,matching_neighbour], V_data_selected, V_ref_selected)
+        data_non_rejected = data_selected[:,non_rejected_points_idx]     #Update the points and their matched ones
+        non_rejected_matching_neighbour = matching_neighbour[non_rejected_points_idx]
+
+        # Minimizing
+        non_rejected_weights = weights_selected[non_rejected_points_idx]
+
+        R, T = best_rigid_transform_weighted(data_non_rejected, ref[:, non_rejected_matching_neighbour], non_rejected_weights)
+        data_aligned = R@data_aligned + T
+
+
+        valid_indices = selected_points_idx[non_rejected_points_idx]  # retrieving the indexes of the original points
+        distance = np.sum(np.power(data_aligned[:,valid_indices] - ref[:, non_rejected_matching_neighbour], 2), axis=0)
+        RMS = np.sqrt(np.mean(distance))
+
+        it+=1
+        
+        if(len(R_list)==0):
+            R_list.append(R)
+            T_list.append(T)
+        else:
+            R_list.append(R@R_list[-1])
+            T_list.append(R@T_list[-1]+T)
+
+        neighbors_list.append(matching_neighbour)
+        RMS_list.append(RMS)
+
+    return data_aligned, R_list, T_list, neighbors_list, RMS_list
+
+
+#------------------------------------------------------------------------------------------
+#
+#           Main
+#       \**********/
+#
+#
+#   Here you can define the instructions that are called when you execute this file
+#
 
 
 if __name__ == '__main__':
 
-    if True:         
+    if False:         
         cloud_path = '../data/Lille_street_small.ply'
         cloud_ply = read_ply(cloud_path)
-        cloud = np.vstack((cloud_ply['x'], cloud_ply['y'], cloud_ply['z'])).T
-        all_eigenvalues, all_eigenvectors, aD, d_star, radius, Ef, V = compute_features(cloud, cloud, 0.50)
+        cloud = np.vstack((cloud_ply['x'], cloud_ply['y'], cloud_ply['z']))
+        
+#selecting_function =  NoSelection
+        selecting_function = lambda data, d_star, Ef: RandomSelection(data,d_star, Ef, 0.1)
+        #selecting_function = lambda data, d_star, Ef: EntropySelection(data,d_star, Ef, 0.6)
+        #selecting_function = lambda data, d_star, Ef:: EntropySelection(data,d_star,Ef, 0.7)
+        #selecting_function = DimensionSelection
+
+        #weighting_function = ConstantWeighting
+        #weighting_function = OmnivarianceWeighting
+        weighting_function = NormalWeighting
+
+        #rejection_function = NoRejection
+        #rejection_function = lambda data, ref, V_data, V_ref : EuclidianRejection(data,ref,V_data, V_ref, 0.7)
+        #rejection_function = lambda data, ref, V_data, V_ref : OmnivarianceRejection(data,ref,V_data, V_ref, 0.5)
+        #rejection_function = lambda data, ref, V_data, V_ref : OmnivarianceRejection(data,ref,V_data, V_ref, 0.7)
+        #rejection_function = lambda data, ref, V_data, V_ref : OmnivarianceRejection(data,ref,V_data, V_ref, 0.9)
+        rejection_function = DeviationRejection
+
+
+
+        new_cloud, R_list, T_list, neighbors_list, RMS_list = icp_ultimate(cloud, cloud, 100, 0.6, selecting_function, weighting_function, rejection_function)
+
+        #show_ICP(cloud, cloud, R_list, T_list, neighbors_list)
    
     # Transformation estimation
     # *************************
     #
 
     # If statement to skip this part if wanted
-    if False:
+    if True:
 
         # Cloud paths
         bunny_o_path = '../data/bunny_original.ply'
@@ -298,15 +288,39 @@ if __name__ == '__main__':
         bunny_r_ply = read_ply(bunny_r_path)
         bunny_o = np.vstack((bunny_o_ply['x'], bunny_o_ply['y'], bunny_o_ply['z']))
         bunny_r = np.vstack((bunny_r_ply['x'], bunny_r_ply['y'], bunny_r_ply['z']))
+        
+
+        selecting_function =  NoSelection
+        #selecting_function = lambda data, d_star, Ef: RandomSelection(data,d_star, Ef, 0.1)
+        #selecting_function = lambda data, d_star, Ef: EntropySelection(data,d_star, Ef, 0.6)
+        #selecting_function = lambda data, d_star, Ef:: EntropySelection(data,d_star,Ef, 0.7)
+        #selecting_function = DimensionSelection
+
+        #weighting_function = ConstantWeighting
+        weighting_function = OmnivarianceWeighting
+        #weighting_function = NormalWeighting
+
+        #rejection_function = NoRejection
+        rejection_function = lambda data, ref, V_data, V_ref : EuclidianRejection(data,ref,V_data, V_ref, 0.7)
+        #rejection_function = lambda data, ref, V_data, V_ref : OmnivarianceRejection(data,ref,V_data, V_ref, 0.5)
+        #rejection_function = lambda data, ref, V_data, V_ref : OmnivarianceRejection(data,ref,V_data, V_ref, 0.7)
+        #rejection_function = lambda data, ref, V_data, V_ref : OmnivarianceRejection(data,ref,V_data, V_ref, 0.9)
+        #rejection_function = DeviationRejection
+
+
+        bunny_r_opt, R_list, T_list, neighbors_list, RMS_list = icp_ultimate(bunny_r, bunny_o, 100, 1e-4, selecting_function, weighting_function, rejection_function)
+        
+        show_ICP(bunny_r, bunny_o, R_list, T_list, neighbors_list)
+
 
         # Find the best transformation
-        R, T = best_rigid_transform(bunny_r, bunny_o)
+        #R, T = best_rigid_transform(bunny_r, bunny_o)
 
         # Apply the tranformation
-        bunny_r_opt = R.dot(bunny_r) + T
+        #bunny_r_opt = R.dot(bunny_r) + T
 
         # Save cloud
-        write_ply('../bunny_r_opt', [bunny_r_opt.T], ['x', 'y', 'z'])
+        #write_ply('../bunny_r_opt', [bunny_r_opt.T], ['x', 'y', 'z'])
 
         # Compute RMS
         distances2_before = np.sum(np.power(bunny_r - bunny_o, 2), axis=0)
@@ -401,4 +415,3 @@ if __name__ == '__main__':
         plt.xlabel("Itération")
         plt.ylabel("RMS")
         plt.show()
-        
