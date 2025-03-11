@@ -1,7 +1,7 @@
  # Import numpy package and name it "np"
 import numpy as np
 
-def NoRejection(data, ref):
+def NoRejection(data, ref,V_data, V_ref,):
     '''
     Rejects no point pairs
     

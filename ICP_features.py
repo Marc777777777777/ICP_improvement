@@ -3,7 +3,7 @@ import numpy as np
 
 # Import functions from scikit-learn
 from sklearn.neighbors import KDTree
-
+from ply import write_ply, read_ply
 
 def compute_local_PCA(query_points, cloud_points, radius):
     # This function needs to compute PCA on the neighborhoods of all query_points in cloud_points
@@ -96,7 +96,6 @@ def compute_optimal_radius(query_points, point_cloud, radius_list):
             neighbors_idx = tree.query_radius(query_points[i].reshape(1,3), r)[0]
             n_neighbor = len(neighbors_idx)
             if n_neighbor < 10:
-                print(f"Point {i}, radius {r}, neighborhood {n_neighbor}")
                 continue  # Skip small neighborhoods
 
             # Compute the PCA and get eigenvalues
@@ -188,3 +187,8 @@ def best_rigid_transform_weighted(data, ref, weights):
     
     T = ref_barycenter - R @ data_barycenter
     return R, T
+
+def computeRn(cloud, n):
+    tree = KDTree(cloud.T, 40)
+    distance_list, _  = tree.query(cloud.T, n)
+    return np.mean(distance_list, axis = 1)
