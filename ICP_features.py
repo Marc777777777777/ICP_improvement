@@ -12,8 +12,8 @@ def compute_local_PCA(query_points, cloud_points, radius):
     neighbors_list = tree.query_radius(query_points, radius)
     # neighbors_list = tree.query(query_points, k=30)   # KNN VERSION
 
-    all_eigenvalues = np.zeros((cloud_points.shape[0], 3))
-    all_eigenvectors = np.zeros((cloud_points.shape[0], 3, 3))
+    all_eigenvalues = np.zeros((query_points.shape[0], 3))
+    all_eigenvectors = np.zeros((query_points.shape[0], 3, 3))
 
     for i in range(neighbors_list.shape[0]):
         # We first get the list of neighbor indices
@@ -58,17 +58,20 @@ def compute_features(query_points, cloud_points, radius):
 
 def compute_aiD(eigenvalues, eps = 1e-6):
     standard_deviation = np.sqrt(np.maximum(eigenvalues, 0))
+    a1D = standard_deviation[2] - standard_deviation[1]
+    a2D = standard_deviation[1] - standard_deviation[0]
+    a3D = standard_deviation[0]
 
-    a1D = 1 - standard_deviation[:,1]/(standard_deviation[:,2]+eps)
-    a2D = (standard_deviation[:,1] - standard_deviation[:,0])/(standard_deviation[:,2]+eps)
-    a3D = standard_deviation[:,0]/(standard_deviation[:,2]+eps)
+    # a1D = 1 - standard_deviation[:,1]/(standard_deviation[:,2]+eps)
+    # a2D = (standard_deviation[:,1] - standard_deviation[:,0])/(standard_deviation[:,2]+eps)
+    # a3D = standard_deviation[:,0]/(standard_deviation[:,2]+eps)
     
-    sum_ad = a1D + a2D + a3D
-    # sum_ad = standard_deviation[0]
+    # normalization = a1D + a2D + a3D
+    normalization = standard_deviation[2]
     
-    a1D *= 1/sum_ad
-    a2D *= 1/sum_ad
-    a3D *= 1/sum_ad
+    a1D *= 1/normalization
+    a2D *= 1/normalization
+    a3D *= 1/normalization
 
     return a1D, a2D, a3D
 
@@ -91,19 +94,25 @@ def compute_optimal_radius(query_points, point_cloud, radius_list):
     for i in range(n):
         for r in radius_list:
             neighbors_idx = tree.query_radius(query_points[i].reshape(1,3), r)[0]
-            if len(neighbors_idx) < 10:
+            n_neighbor = len(neighbors_idx)
+            if n_neighbor < 10:
+                print(f"Point {i}, radius {r}, neighborhood {n_neighbor}")
                 continue  # Skip small neighborhoods
-            
-            neighbors = point_cloud[neighbors_idx]
-            eigenvalues = compute_local_PCA(neighbors)[0]
-            a1D, a2D, a3D = compute_aiD(eigenvalues)
-            entropy = Shannon_Entropy(a1D, a2D, a3D)
 
+            # Compute the PCA and get eigenvalues
+            neighbors = point_cloud[neighbors_idx]
+            barycenter_neighbor = np.mean(neighbors, axis=0)
+            cov_mat = (1/n_neighbor)*(neighbors-barycenter_neighbor).T@(neighbors-barycenter_neighbor)
+
+            output_eigh = np.linalg.eigh(cov_mat)
+            eigenvalue = output_eigh[0]
+            a1D, a2D, a3D = compute_aiD(eigenvalue)
+            entropy = Shannon_Entropy(a1D, a2D, a3D)
             if entropy < min_entropy:
                 min_entropy = entropy
                 optimal_radius = r
 
-        optimal_radius_list[i] = optimal_radius
+            optimal_radius_list[i] = optimal_radius
 
     return optimal_radius_list
 
