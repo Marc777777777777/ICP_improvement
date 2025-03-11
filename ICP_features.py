@@ -112,7 +112,8 @@ def compute_optimal_radius(query_points, point_cloud, radius_list):
                 min_entropy = entropy
                 optimal_radius = r
 
-            optimal_radius_list[i] = optimal_radius
+        optimal_radius_list[i] = optimal_radius
+        min_entropy = 10000.0
 
     return optimal_radius_list
 
