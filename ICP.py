@@ -2,6 +2,7 @@
 import numpy as np
 import json
 import os
+import time
 
 # Import library to plot in python
 from matplotlib import pyplot as plt
@@ -55,6 +56,7 @@ def icp_ultimate(data, ref, max_iter, distance_threshold, filename, Selection = 
     T_list = []
     neighbors_list = []
     distance_list = []
+    time_list = []
 
     it = 0
     distance = np.inf
@@ -111,14 +113,12 @@ def icp_ultimate(data, ref, max_iter, distance_threshold, filename, Selection = 
         with open(filename, 'w') as f:
             json.dump(data_to_save, f)
         print("Data saved successfully")
+
     n = 5
     Rn = computeRn(data, n)
 
-    print(all_eigenvalues_data.shape)
-    print(all_eigenvectors_data.shape)
-    print(all_eigenvalues_data.shape)
-    print(all_eigenvectors_data.shape)
-    
+    start_time = time.time()
+
     while it < max_iter and distance > distance_threshold:
         if it%10 == 0:
             print("Itération", it)
@@ -151,7 +151,7 @@ def icp_ultimate(data, ref, max_iter, distance_threshold, filename, Selection = 
         data_aligned = R@data_aligned + T
 
         #calculating distance
-        distance_matching = tree.query(data.T)[0].flatten()
+        distance_matching = tree.query(data_aligned.T)[0].flatten()
         distances_kept = distance_matching[distance_matching< 10 * Rn]
         if len(distances_kept) != 0:    
             distance =  np.mean(distances_kept)
@@ -169,7 +169,8 @@ def icp_ultimate(data, ref, max_iter, distance_threshold, filename, Selection = 
 
         neighbors_list.append(matching_neighbour)
         distance_list.append(distance)
+        time_list.append(time.time()-start_time)
 
-    return data_aligned, R_list, T_list, neighbors_list, distance_list
+    return data_aligned, R_list, T_list, neighbors_list, time_list, distance_list
 
 

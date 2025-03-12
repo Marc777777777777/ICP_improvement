@@ -1,3 +1,27 @@
+#
+#
+#      0===================================0
+#      |    TP2 Iterative Closest Point    |
+#      0===================================0
+#
+#
+#------------------------------------------------------------------------------------------
+#
+#      Utility function given for visualization
+#
+#------------------------------------------------------------------------------------------
+#
+#      Hugues THOMAS - 13/12/2017
+#
+
+
+#------------------------------------------------------------------------------------------
+#
+#          Imports and global variables
+#      \**********************************/
+#
+
+ 
 # Import numpy package and name it "np"
 import numpy as np
 
@@ -6,15 +30,27 @@ from matplotlib import pyplot as plt
 from matplotlib import collections as mc
 from mpl_toolkits.mplot3d import Axes3D
 
+
+
+#------------------------------------------------------------------------------------------
+#
+#           Functions
+#       \***************/
+#
+#
+
+
+
+
 def show_ICP(data, ref, R_list, T_list, neighbors_list):
     '''
     Show a succession of transformation obtained by ICP.
     Inputs :
-            data = (d x N1) matrix where "N1" is the number of point and "d" the dimension
-            ref = (d x N2) matrix where "N2" is the number of point and "d" the dimension
-            R = list of (d x d) rotation matrix
-            T = list of (d x 1) translation vector
-            neighbors_list = list of N1 indices. The neighbors of data in ref
+                  data = (d x N1) matrix where "N1" is the number of point and "d" the dimension
+                   ref = (d x N2) matrix where "N2" is the number of point and "d" the dimension
+                     R = list of (d x d) rotation matrix
+                     T = list of (d x 1) translation vector
+        neighbors_list = list of N1 indices. The neighbors of data in ref
 
     This function works if R_i and T_i represent the tranformation of the original cloud 
     at iteration i, such that data_(i) = R_i * data + T_i
@@ -93,3 +129,5 @@ def show_ICP(data, ref, R_list, T_list, neighbors_list):
 
     # Start figure
     plt.show()
+
+

@@ -54,7 +54,7 @@ def rotation_matrix_z(theta):
 
 if __name__ == "__main__":
     # Path of the file
-    file_path = 'data/bunny.ply'
+    file_path = '../data/Lille_street_small.ply'
 
     # Load point cloud
     data = read_ply(file_path)
@@ -84,5 +84,5 @@ if __name__ == "__main__":
     R = R_x@R_z  # First rotate around X, then around Y, then around Z
     transformed_points = transformed_points@R
 
-    write_ply('data/modified_bunny.ply', [transformed_points], ['x', 'y', 'z'])
+    write_ply('../data/modified_Lille_street_small.ply', [transformed_points], ['x', 'y', 'z'])
 

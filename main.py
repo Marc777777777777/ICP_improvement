@@ -23,13 +23,13 @@ from ICP import *
 if __name__ == '__main__':
     # Cloud paths
     #Street
-    #cloud_o_path = '../data/modified_street.ply'
-    #cloud_r_path = '../data/Lille_street_small_normals.ply'
+    #cloud_o_path = '../data/modified_Lille_street_small.ply'
+    #cloud_r_path = '../data/Lille_street_small.ply'
     #filename = '../stored_features/street.json'             #to store features 
 
     #Bunny
-    cloud_o_path = '../data/bunny_original.ply'
-    cloud_r_path = '../data/bunny_returned.ply'
+    cloud_o_path = '../data/bunny.ply'
+    cloud_r_path = '../data/modified_bunny.ply'
     filename = '../stored_features/bunny.json'
 
 	# Load clouds
@@ -80,22 +80,22 @@ if __name__ == '__main__':
     ]
 
     iteration = 30
-    tol = 1e-4
+    tol = 0
 
-    if False:
-        cloud_r_opt, R_list, T_list, neighbors_list, distance_list = icp_ultimate(cloud_r, cloud_o, iteration, tol, filename, selecting_function, weighting_function, rejection_function)
+    if True:
+        cloud_r_opt, R_list, T_list, neighbors_list, time_list, distance_list = icp_ultimate(cloud_r, cloud_o, iteration, tol, filename, selecting_function, weighting_function, rejection_function)
 
         show_ICP(cloud_r, cloud_o, R_list, T_list, neighbors_list)
 
         # Compute RMS
-        distances2_before = np.sum(np.power(cloud_r - cloud_o, 2), axis=0)
-        RMS_before = np.sqrt(np.mean(distances2_before))
-        distances2_after = np.sum(np.power(cloud_r_opt - cloud_o, 2), axis=0)
-        RMS_after = np.sqrt(np.mean(distances2_after))
+        #distances2_before = np.sum(np.power(cloud_r - cloud_o, 2), axis=0)
+        #RMS_before = np.sqrt(np.mean(distances2_before))
+        #distances2_after = np.sum(np.power(cloud_r_opt - cloud_o, 2), axis=0)
+        #RMS_after = np.sqrt(np.mean(distances2_after))
 
-        print('Average RMS between points :')
-        print('Before = {:.3f}'.format(RMS_before))
-        print(' After = {:.3f}'.format(RMS_after))
+        #print('Average RMS between points :')
+        #print('Before = {:.3f}'.format(RMS_before))
+        #print(' After = {:.3f}'.format(RMS_after))
 
         plt.plot(range(len(distance_list)), distance_list)
         plt.xlabel("Iterations")
@@ -103,13 +103,13 @@ if __name__ == '__main__':
         plt.title("Evolution of distances")
         plt.show()    
 
-    if True:
+    if False:
         label_list = ["Default", "Random","Ef > 0.6", "Ef > 0.7", "d*=2"]
         for i,s_function in enumerate(selecting_function_list):
-            cloud_r_opt, R_list, T_list, neighbors_list, distance_list = icp_ultimate(cloud_r, cloud_o, iteration, tol, filename, s_function, weighting_function, rejection_function)
-            plt.plot(range(len(distance_list)), distance_list,'k-', label = label_list[i])
+            cloud_r_opt, R_list, T_list, neighbors_list, time_list, distance_list = icp_ultimate(cloud_r, cloud_o, iteration, tol, filename, s_function, weighting_function, rejection_function)
+            plt.semilogy(time_list, distance_list, label = label_list[i])
 
-        plt.xlabel("Iterations")
+        plt.xlabel("Time (s)")
         plt.ylabel("Distance")
         plt.title("Evolution of distances")
         plt.legend()
@@ -118,22 +118,22 @@ if __name__ == '__main__':
     if False:
         label_list = ["Default", "Omnivariance","Normal"]
         for i,w_function in enumerate(weighting_function_list):
-            cloud_r_opt, R_list, T_list, neighbors_list, distance_list = icp_ultimate(cloud_r, cloud_o, iteration, tol, filename, selecting_function, w_function, rejection_function)
-            plt.plot(range(len(distance_list)), distance_list,'k-', label = label_list[i])
+            cloud_r_opt, R_list, T_list, neighbors_list, time_list, distance_list = icp_ultimate(cloud_r, cloud_o, iteration, tol, filename, selecting_function, w_function, rejection_function)
+            plt.semilogy(time_list, distance_list, label = label_list[i])
 
-        plt.xlabel("Iterations")
+        plt.xlabel("Time (s)")
         plt.ylabel("Distance")
         plt.title("Evolution of distances")
         plt.legend()
         plt.show() 
 
     if False:
-        label_list = ["Default", "Random","Ef > 0.6", "Ef > 0.7", "d*=2"]
+        label_list = ["Default", "d2^70","2.5 * sigma d", "dv50", "dv70", "dv90"]
         for i,r_function in enumerate(rejection_function_list):
-            cloud_r_opt, R_list, T_list, neighbors_list, distance_list = icp_ultimate(cloud_r, cloud_o, iteration, tol, filename, selecting_function, weighting_function, r_function)
-            plt.plot(range(len(distance_list)), distance_list,'k-', label = label_list[i])
+            cloud_r_opt, R_list, T_list, neighbors_list, time_list, distance_list = icp_ultimate(cloud_r, cloud_o, iteration, tol, filename, selecting_function, weighting_function, r_function)
+            plt.semilogy(time_list, distance_list, label = label_list[i])
 
-        plt.xlabel("Iterations")
+        plt.xlabel("Time (s)")
         plt.ylabel("Distance")
         plt.title("Evolution of distances")
         plt.legend()

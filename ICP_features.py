@@ -58,16 +58,16 @@ def compute_features(query_points, cloud_points, radius):
 
 def compute_aiD(eigenvalues, eps = 1e-6):
     standard_deviation = np.sqrt(np.maximum(eigenvalues, 0))
-    a1D = standard_deviation[2] - standard_deviation[1]
-    a2D = standard_deviation[1] - standard_deviation[0]
-    a3D = standard_deviation[0]
+    a1D = standard_deviation[:,2] - standard_deviation[:,1]
+    a2D = standard_deviation[:,1] - standard_deviation[:,0]
+    a3D = standard_deviation[:,0]
 
     # a1D = 1 - standard_deviation[:,1]/(standard_deviation[:,2]+eps)
     # a2D = (standard_deviation[:,1] - standard_deviation[:,0])/(standard_deviation[:,2]+eps)
     # a3D = standard_deviation[:,0]/(standard_deviation[:,2]+eps)
     
     # normalization = a1D + a2D + a3D
-    normalization = standard_deviation[2]
+    normalization = standard_deviation[:,2]
     
     a1D *= 1/normalization
     a2D *= 1/normalization
@@ -107,8 +107,8 @@ def compute_optimal_radius(query_points, point_cloud, radius_list):
             # cov_mat = (1/n_neighbor)*(neighbors-barycenter_neighbor).T@(neighbors-barycenter_neighbor)
             cov_mat = np.cov(neighbors.T)
             eigenvalue = np.linalg.eigh(cov_mat)[0]
-            a1D, a2D, a3D = compute_aiD(eigenvalue)
-            entropy = Shannon_Entropy(a1D, a2D, a3D)
+            a1D, a2D, a3D = compute_aiD(eigenvalue.reshape(1,3))
+            entropy = Shannon_Entropy(a1D, a2D, a3D)[0]
             if entropy < entropy_list[i]:
                 optimal_radius_list[i] = r
                 entropy_list[i] = entropy
