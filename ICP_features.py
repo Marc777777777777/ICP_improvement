@@ -88,31 +88,31 @@ def compute_optimal_radius(query_points, point_cloud, radius_list):
     """
     tree = KDTree(point_cloud)
     n = query_points.shape[0]
-    optimal_radius_list = np.zeros(n)
-    min_entropy = 10000.0
-
-    for i in range(n):
-        for r in radius_list:
-            neighbors_idx = tree.query_radius(query_points[i].reshape(1,3), r)[0]
+    optimal_radius_list = radius_list[0]*np.ones(n)
+    entropy_list = float("inf")*np.ones(n)
+    for r in radius_list:
+        print("r =",r)
+        neighborhoods = tree.query_radius(query_points, r)
+        for i in range(n):
+            neighbors_idx = neighborhoods[i]
             n_neighbor = len(neighbors_idx)
+
+            # Skip small neighborhoods
             if n_neighbor < 10:
-                continue  # Skip small neighborhoods
+                continue  
 
             # Compute the PCA and get eigenvalues
             neighbors = point_cloud[neighbors_idx]
-            barycenter_neighbor = np.mean(neighbors, axis=0)
-            cov_mat = (1/n_neighbor)*(neighbors-barycenter_neighbor).T@(neighbors-barycenter_neighbor)
-
-            output_eigh = np.linalg.eigh(cov_mat)
-            eigenvalue = output_eigh[0]
+            # barycenter_neighbor = np.mean(neighbors, axis=0)
+            # cov_mat = (1/n_neighbor)*(neighbors-barycenter_neighbor).T@(neighbors-barycenter_neighbor)
+            cov_mat = np.cov(neighbors.T)
+            eigenvalue = np.linalg.eigh(cov_mat)[0]
             a1D, a2D, a3D = compute_aiD(eigenvalue)
             entropy = Shannon_Entropy(a1D, a2D, a3D)
-            if entropy < min_entropy:
-                min_entropy = entropy
-                optimal_radius = r
+            if entropy < entropy_list[i]:
+                optimal_radius_list[i] = r
+                entropy_list[i] = entropy
 
-        optimal_radius_list[i] = optimal_radius
-        min_entropy = 10000.0
 
     return optimal_radius_list
 
