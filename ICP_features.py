@@ -116,39 +116,6 @@ def compute_optimal_radius(query_points, point_cloud, radius_list):
 
     return optimal_radius_list
 
-
-def best_rigid_transform(data, ref):
-    '''
-    Computes the least-squares best-fit transform that maps corresponding points data to ref.
-    Inputs :
-        data = (d x N) matrix where "N" is the number of points and "d" the dimension
-         ref = (d x N) matrix where "N" is the number of points and "d" the dimension
-    Returns :
-           R = (d x d) rotation matrix
-           T = (d x 1) translation vector
-           Such that R * data + T is aligned on ref
-    '''
-
-    R = np.eye(data.shape[0])
-    T = np.zeros((data.shape[0],1))
-    data_barycenter = np.mean(data, axis = 1, keepdims = True)
-    ref_barycenter = np.mean(ref, axis = 1, keepdims = True)
-
-    Q_data = data -  data_barycenter
-    Q_ref = ref - ref_barycenter
-
-    H = Q_data@Q_ref.T
-    U, _, Vh = np.linalg.svd(H)
-    R = Vh.T @ U.T
-
-    if np.linalg.det(R) < 0:
-        U[:, -1] *= -1
-        R = Vh.T @ U.T
-
-    T = ref_barycenter - R @ data_barycenter
-    return R, T
-
-
 def best_rigid_transform_weighted(data, ref, weights):
     '''
     Computes the least-squares best-fit transform that maps corresponding points data to ref by taking account of the weights.
@@ -170,9 +137,7 @@ def best_rigid_transform_weighted(data, ref, weights):
     Q_data = data -  data_barycenter
     Q_ref = ref - ref_barycenter
 
-    W = np.diag(weights)
-
-    H = Q_data@W@Q_ref.T
+    H = Q_data * weights @ Q_ref.T
 
     U, _, Vh = np.linalg.svd(H)
 
