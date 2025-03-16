@@ -22,22 +22,37 @@ from ICP import *
 
 if __name__ == '__main__':
     # Cloud paths
+
+    #Dragon
+    #cloud_o_path = '../data/dragon1.ply'
+    #cloud_r_path = '../data/dragon2.ply'
+    #filename = '../stored_features/dragon.json'             #to store features 
+
     #Street
     #cloud_o_path = '../data/modified_Lille_street_small.ply'
     #cloud_r_path = '../data/Lille_street_small.ply'
     #filename = '../stored_features/street.json'             #to store features 
 
     #Bunny
-    cloud_o_path = '../data/bunny.ply'
-    cloud_r_path = '../data/modified_bunny.ply'
-    filename = '../stored_features/bunny.json'
+    #cloud_o_path = '../data/bunny.ply'
+    #cloud_r_path = '../data/modified_bunny.ply'
+    #filename = '../stored_features/bunny.json'
+
+    #Notre dame
+    #cloud_o_path = '../data/Notre_Dame_Des_Champs_1.ply'
+    #cloud_r_path = '../data/Notre_Dame_Des_Champs_1.ply'
+    #filename = '../stored_features/notre_dame.json'             #to store features 
+
+    #Airborne lidar
+    cloud_o_path = '../data/airborne_lidar1.ply'
+    cloud_r_path = '../data/airborne_lidar2.ply'
+    filename = '../stored_features/airborne_lidar.json'             #to store features 
 
 	# Load clouds
     cloud_o_ply = read_ply(cloud_o_path)
     cloud_r_ply = read_ply(cloud_r_path)
     cloud_o = np.vstack((cloud_o_ply['x'], cloud_o_ply['y'], cloud_o_ply['z']))
     cloud_r = np.vstack((cloud_r_ply['x'], cloud_r_ply['y'], cloud_r_ply['z']))
-        
 
     selecting_function =  NoSelection
     #selecting_function = lambda data, d_star, Ef: RandomSelection(data,d_star, Ef, 0.1)
@@ -58,9 +73,9 @@ if __name__ == '__main__':
 
     selecting_function_list = [
         NoSelection,
-        lambda data, d_star, Ef: RandomSelection(data,d_star, Ef, 0.1),
-        lambda data, d_star, Ef: EntropySelection(data,d_star, Ef, 0.6),
-        lambda data, d_star, Ef: EntropySelection(data,d_star,Ef, 0.7),
+        lambda data, d_star, Ef: RandomSelection(data,d_star,Ef,0.1),
+        lambda data, d_star, Ef: EntropySelection(data,d_star,Ef,0.6),
+        lambda data, d_star, Ef: EntropySelection(data,d_star,Ef,0.7),
         DimensionSelection
     ]
 
@@ -79,10 +94,10 @@ if __name__ == '__main__':
         DeviationRejection
     ]
 
-    iteration = 30
+    iteration = 40
     tol = 0
 
-    if True:
+    if False:
         cloud_r_opt, R_list, T_list, neighbors_list, time_list, distance_list = icp_ultimate(cloud_r, cloud_o, iteration, tol, filename, selecting_function, weighting_function, rejection_function)
 
         show_ICP(cloud_r, cloud_o, R_list, T_list, neighbors_list)
@@ -101,9 +116,9 @@ if __name__ == '__main__':
         plt.xlabel("Iterations")
         plt.ylabel("Distance")
         plt.title("Evolution of distances")
-        plt.show()    
+        plt.show(plt.show(block=False))    
 
-    if False:
+    if True:
         label_list = ["Default", "Random","Ef > 0.6", "Ef > 0.7", "d*=2"]
         for i,s_function in enumerate(selecting_function_list):
             cloud_r_opt, R_list, T_list, neighbors_list, time_list, distance_list = icp_ultimate(cloud_r, cloud_o, iteration, tol, filename, s_function, weighting_function, rejection_function)
@@ -113,9 +128,9 @@ if __name__ == '__main__':
         plt.ylabel("Distance")
         plt.title("Evolution of distances")
         plt.legend()
-        plt.show() 
+        plt.show(plt.show(block=False)) 
 
-    if False:
+    if True:
         label_list = ["Default", "Omnivariance","Normal"]
         for i,w_function in enumerate(weighting_function_list):
             cloud_r_opt, R_list, T_list, neighbors_list, time_list, distance_list = icp_ultimate(cloud_r, cloud_o, iteration, tol, filename, selecting_function, w_function, rejection_function)
@@ -125,9 +140,9 @@ if __name__ == '__main__':
         plt.ylabel("Distance")
         plt.title("Evolution of distances")
         plt.legend()
-        plt.show() 
+        plt.show(plt.show(block=False)) 
 
-    if False:
+    if True:
         label_list = ["Default", "d2^70","2.5 * sigma d", "dv50", "dv70", "dv90"]
         for i,r_function in enumerate(rejection_function_list):
             cloud_r_opt, R_list, T_list, neighbors_list, time_list, distance_list = icp_ultimate(cloud_r, cloud_o, iteration, tol, filename, selecting_function, weighting_function, r_function)
@@ -137,4 +152,4 @@ if __name__ == '__main__':
         plt.ylabel("Distance")
         plt.title("Evolution of distances")
         plt.legend()
-        plt.show() 
+        plt.show(plt.show(block=False)) 

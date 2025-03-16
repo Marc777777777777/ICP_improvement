@@ -84,7 +84,7 @@ def icp_ultimate(data, ref, max_iter, distance_threshold, filename, Selection = 
         V_ref = np.array(loaded_results['V_ref'])
 
     else:
-        radius_list = [0.01, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 10.0]
+        radius_list = [0.01, 0.05, 0.1, 0.2, 0.5, 1.0]
         radius_list_data = compute_optimal_radius(data.T, data.T, radius_list) 
         radius_list_ref = compute_optimal_radius(ref.T, ref.T, radius_list) 
 
