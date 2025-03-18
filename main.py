@@ -24,9 +24,9 @@ if __name__ == '__main__':
     # Cloud paths
 
     #Dragon
-    #cloud_o_path = '../data/dragon1.ply'
-    #cloud_r_path = '../data/dragon2.ply'
-    #filename = '../stored_features/dragon.json'             #to store features 
+    cloud_o_path = '../data/dragon1.ply'
+    cloud_r_path = '../data/dragon2.ply'
+    filename = '../stored_features/dragon.json'             #to store features 
 
     #Street
     #cloud_o_path = '../data/modified_Lille_street_small.ply'
@@ -39,14 +39,14 @@ if __name__ == '__main__':
     #filename = '../stored_features/bunny.json'
 
     #Notre dame
-    #cloud_o_path = '../data/Notre_Dame_Des_Champs_1.ply'
-    #cloud_r_path = '../data/Notre_Dame_Des_Champs_1.ply'
-    #filename = '../stored_features/notre_dame.json'             #to store features 
+    cloud_o_path = '../data/Notre_Dame_Des_Champs_1.ply'
+    cloud_r_path = '../data/Notre_Dame_Des_Champs_2.ply'
+    filename = '../stored_features/notre_dame.json'             #to store features 
 
     #Airborne lidar
-    cloud_o_path = '../data/airborne_lidar1.ply'
-    cloud_r_path = '../data/airborne_lidar2.ply'
-    filename = '../stored_features/airborne_lidar.json'             #to store features 
+    #cloud_o_path = '../data/airborne_lidar1.ply'
+    #cloud_r_path = '../data/airborne_lidar2.ply'
+    #filename = '../stored_features/airborne_lidar.json'             #to store features 
 
 	# Load clouds
     cloud_o_ply = read_ply(cloud_o_path)
@@ -94,10 +94,10 @@ if __name__ == '__main__':
         DeviationRejection
     ]
 
-    iteration = 40
+    iteration = 100
     tol = 0
 
-    if False:
+    if True:
         cloud_r_opt, R_list, T_list, neighbors_list, time_list, distance_list = icp_ultimate(cloud_r, cloud_o, iteration, tol, filename, selecting_function, weighting_function, rejection_function)
 
         show_ICP(cloud_r, cloud_o, R_list, T_list, neighbors_list)
@@ -116,9 +116,9 @@ if __name__ == '__main__':
         plt.xlabel("Iterations")
         plt.ylabel("Distance")
         plt.title("Evolution of distances")
-        plt.show(plt.show(block=False))    
+        plt.show(block=False) 
 
-    if True:
+    if False:
         label_list = ["Default", "Random","Ef > 0.6", "Ef > 0.7", "d*=2"]
         for i,s_function in enumerate(selecting_function_list):
             cloud_r_opt, R_list, T_list, neighbors_list, time_list, distance_list = icp_ultimate(cloud_r, cloud_o, iteration, tol, filename, s_function, weighting_function, rejection_function)
@@ -128,9 +128,9 @@ if __name__ == '__main__':
         plt.ylabel("Distance")
         plt.title("Evolution of distances")
         plt.legend()
-        plt.show(plt.show(block=False)) 
+        plt.show()
 
-    if True:
+    if False:
         label_list = ["Default", "Omnivariance","Normal"]
         for i,w_function in enumerate(weighting_function_list):
             cloud_r_opt, R_list, T_list, neighbors_list, time_list, distance_list = icp_ultimate(cloud_r, cloud_o, iteration, tol, filename, selecting_function, w_function, rejection_function)
@@ -140,10 +140,10 @@ if __name__ == '__main__':
         plt.ylabel("Distance")
         plt.title("Evolution of distances")
         plt.legend()
-        plt.show(plt.show(block=False)) 
+        plt.show()
 
-    if True:
-        label_list = ["Default", "d2^70","2.5 * sigma d", "dv50", "dv70", "dv90"]
+    if False:
+        label_list = ["Default", "d2^70", "dv50", "dv70", "dv90","2.5 * sigma d"]
         for i,r_function in enumerate(rejection_function_list):
             cloud_r_opt, R_list, T_list, neighbors_list, time_list, distance_list = icp_ultimate(cloud_r, cloud_o, iteration, tol, filename, selecting_function, weighting_function, r_function)
             plt.semilogy(time_list, distance_list, label = label_list[i])
@@ -152,4 +152,4 @@ if __name__ == '__main__':
         plt.ylabel("Distance")
         plt.title("Evolution of distances")
         plt.legend()
-        plt.show(plt.show(block=False)) 
+        plt.show()
