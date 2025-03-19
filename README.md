@@ -1,1 +1,5 @@
 # NPM3D-Project
+
+Automatic 3D point cloud registration is a main issue in computer vision and photogrammetry. The most commonly adopted solution is the well-known ICP (Iterative Closest Point) algorithm. This standard approach performs a fine registration of two overlapping point clouds by iteratively estimating the transformation parameters, and assuming that good a priori alignment is provided. A large body of literature has proposed many variations of this algorithm in order to improve each step of the process. The research paper [”IMPROVING 3D LIDAR POINT CLOUD REGISTRATION USING OPTIMAL NEIGHBORHOOD KNOWLEDGE”](https://isprs-annals.copernicus.org/articles/I-3/111/2012/isprsannals-I-3-111-2012.pdf) written by Adrien Gressin, Clément Mallet, Nicolas David and published in 2012 presents a way to improve this method by using local descriptors around each point. The paper additionally compares the result of different ICP variants on three different point clouds.
+
+We implemented all new ICP variants, and tested their performance on 5 new point clouds. 
